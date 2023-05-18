@@ -1,43 +1,16 @@
-import 'dart:convert';
-
+import 'package:dcworld/controller/foodController.dart';
+import 'package:dcworld/controller/movieController.dart';
+import 'package:dcworld/screen/foodItems.dart';
 import 'package:dcworld/screen/movieDetails.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../model/movieDataModel.dart';
+import 'package:get/get.dart';
 
-class MovieList extends StatefulWidget {
-  const MovieList({super.key});
+class MoviesPage extends StatelessWidget {
+  final MovieController movieController =
+      Get.put(MovieController()); //Initialize declared controller
 
-  @override
-  State<MovieList> createState() => _MovieListState();
-}
-
-class _MovieListState extends State<MovieList> {
-  List<Search> movieList = <Search>[];
-  @override
-  void initState() {
-    populateMovies();
-    super.initState();
-  }
-
-  populateMovies() async {
-    final movies = await fetchMovies();
-    setState(() {
-      movieList = movies;
-    });
-  }
-
-  Future<List<Search>> fetchMovies() async {
-    String baseUrl = "https://www.omdbapi.com/?s=Batman&page=2&apikey=564727fa";
-    var response = await http.get(Uri.parse(baseUrl));
-    if (response.statusCode == 200) {
-      final result = jsonDecode(response.body);
-      Iterable list = result["Search"];
-      return list.map((movie) => Search.fromJson(movie)).toList();
-    } else {
-      throw Exception("Failed to load movies");
-    }
-  }
+  final FoodController foodController = Get.put(FoodController());
+  MoviesPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -49,45 +22,82 @@ class _MovieListState extends State<MovieList> {
           title: const Text("DC World!"),
         ),
         body: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: GridView.builder(
-            itemCount: movieList.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2),
-            shrinkWrap: true,
-            itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => MovieDetails(
-                            index: index, movieDetails: movieList)));
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                          child: Hero(
-                              tag: index,
-                              child: Image.network(movieList[index].poster!))),
-                      Center(
-                        child: SizedBox(
-                          width: 150,
-                          child: Text(
-                            movieList[index].title!,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white, fontSize: 16),
+            padding: const EdgeInsets.all(20.0),
+            child: GetBuilder<MovieController>(
+              builder: (controller) {
+                return Column(
+                  children: [
+                    GetBuilder<FoodController>(builder: (controller) {
+                      return TextButton(
+                          onPressed: () {
+                            foodController.fetchFoodItems();
+                            Get.to(FoodItemPage());
+                          },
+                          child: const Text(
+                            "See Food Items",
+                            style: TextStyle(color: Colors.white),
+                          ));
+                    }),
+                    controller.isClicked.value
+                        ? Expanded(
+                          child: GridView.builder(
+                              itemCount: controller.movieList.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2),
+                              shrinkWrap: true,
+                              itemBuilder: (context, index) {
+                                return Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Get.to(MovieDetails(
+                                          index: index,
+                                          movieDetails: controller.movieList));
+                                    },
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                            child: Hero(
+                                                tag: index,
+                                                child: Image.network(controller
+                                                    .movieList[index].poster!))),
+                                        Center(
+                                          child: SizedBox(
+                                            width: 150,
+                                            child: Text(
+                                              controller.movieList[index].title!,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                        )
+                        : Center(
+                            child: TextButton(
+                                onPressed: () {
+                                  controller.isClicked.value = true;
+                                  controller.fetchMovies();
+                                  controller.update();
+                                },
+                                child: const Text(
+                                  "See All Movies",
+                                  style: TextStyle(color: Colors.white),
+                                )),
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ));
+                  ],
+                );
+              },
+            )));
   }
 }
